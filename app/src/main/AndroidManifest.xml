@@ -9,10 +9,34 @@
         <activity
             android:name=".MainActivity"
             android:exported="true">
+
+            <!-- Lanzador normal -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!-- Aparecer en "Abrir con" para archivos marcados como SVG -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" android:mimeType="image/svg+xml" />
+                <data android:scheme="file" android:mimeType="image/svg+xml" />
+            </intent-filter>
+
+            <!-- Respaldo: archivos con extensión .svg cuyo MIME viene mal/ausente -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="file" />
+                <data android:scheme="content" />
+                <data android:host="*" />
+                <data android:pathPattern=".*\\.svg" />
+                <data android:pathPattern=".*\\.SVG" />
+            </intent-filter>
+
         </activity>
     </application>
 

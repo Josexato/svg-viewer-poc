@@ -72,6 +72,33 @@ public class MainActivity extends Activity {
 
         render(SAMPLE_SVG);
         setContentView(root);
+
+        // Si la app se abrió tocando un .svg desde otra app ("Abrir con"),
+        // renderizamos ese archivo en vez del ejemplo.
+        handleViewIntent(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleViewIntent(intent);
+    }
+
+    private void handleViewIntent(Intent intent) {
+        if (intent == null || !Intent.ACTION_VIEW.equals(intent.getAction())) {
+            return;
+        }
+        Uri uri = intent.getData();
+        if (uri == null) {
+            return;
+        }
+        String svg = readText(uri);
+        if (svg != null && svg.contains("<svg")) {
+            render(svg);
+        } else {
+            Toast.makeText(this, "El archivo no parece un SVG", Toast.LENGTH_LONG).show();
+        }
     }
 
     // Abre el selector de archivos del sistema (sin permisos en runtime).
