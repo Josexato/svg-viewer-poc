@@ -16,6 +16,8 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class MainActivity extends Activity {
 
@@ -152,14 +154,63 @@ public class MainActivity extends Activity {
                 .replaceFirst("(?s)^\\s*<\\?xml.*?\\?>", "")
                 .replaceFirst("(?s)<!DOCTYPE[^>]*>", "");
 
+        // Hacemos el SVG adaptable: que se ajuste al ancho conservando proporción.
+        cleaned = makeResponsive(cleaned);
+
         String html =
                 "<!DOCTYPE html><html><head>"
               + "<meta name='viewport' content='width=device-width, initial-scale=1'>"
-              + "<style>html,body{margin:0;height:100%;background:#fafafa;}"
-              + "body{display:flex;align-items:center;justify-content:center;}"
-              + "svg{width:100%;height:auto;max-width:100%;}</style>"
+              + "<style>html,body{margin:0;padding:0;background:#fafafa;}"
+              + "svg{display:block;width:100%;height:auto;}</style>"
               + "</head><body>" + cleaned + "</body></html>";
 
         webView.loadDataWithBaseURL(null, html, "text/html", "utf-8", null);
+    }
+
+    // Quita width/height fijos del <svg> y asegura un viewBox, para que el CSS
+    // (width:100%) lo escale al ancho de pantalla manteniendo la proporción.
+    // Así abre ajustado y luego se puede hacer zoom/arrastrar libremente.
+    private String makeResponsive(String svg) {
+        Matcher tag = Pattern.compile("(?is)<svg\\b([^>]*)>").matcher(svg);
+        if (!tag.find()) {
+            return svg;
+        }
+        String attrs = tag.group(1);
+
+        String viewBox = attrValue(attrs, "viewBox");
+        if (viewBox == null) {
+            String w = numeric(attrValue(attrs, "width"));
+            String h = numeric(attrValue(attrs, "height"));
+            if (w != null && h != null) {
+                viewBox = "0 0 " + w + " " + h;
+            }
+        }
+
+        // Eliminamos width y height del propio tag <svg> (no de los hijos).
+        String newAttrs = attrs
+                .replaceAll("(?is)\\s(width|height)\\s*=\\s*\"[^\"]*\"", "")
+                .replaceAll("(?is)\\s(width|height)\\s*=\\s*'[^']*'", "");
+
+        StringBuilder open = new StringBuilder("<svg").append(newAttrs);
+        if (viewBox != null && !newAttrs.toLowerCase().contains("viewbox")) {
+            open.append(" viewBox=\"").append(viewBox).append("\"");
+        }
+        open.append(">");
+
+        return svg.substring(0, tag.start()) + open + svg.substring(tag.end());
+    }
+
+    private static String attrValue(String attrs, String name) {
+        Matcher m = Pattern.compile("(?is)\\b" + name + "\\s*=\\s*[\"']([^\"']*)[\"']").matcher(attrs);
+        return m.find() ? m.group(1) : null;
+    }
+
+    // Devuelve el número inicial (admite "1200" o "1200px"); null si no es numérico.
+    private static String numeric(String value) {
+        if (value == null) {
+            return null;
+        }
+        Matcher m = Pattern.compile("^\\s*(\\d+(?:\\.\\d+)?)\\s*(px)?\\s*$").matcher(value);
+        return m.find() ? m.group(1) : null;
     }
 }
